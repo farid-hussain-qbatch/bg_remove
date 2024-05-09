@@ -1,38 +1,29 @@
 from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
+ 
 from rembg import remove
 from PIL import Image
 import io
 
 app = FastAPI()
 
-
-
-
 @app.post("/tradingview-webhook")
 async def tradingview_webhook(request: Request):
-    content_type = request.headers.get('Content-Type')
-    
-    if content_type == "application/json":
-        data = await request.json()
-        alert_message = data.get("text", "No text provided")
-    elif content_type == "text/plain":
-        data = await request.body()
-        alert_message = data.decode("utf-8")
-    else:
-        return JSONResponse(status_code=400, content={"message": "Unsupported content type"})
-    
-    # Here you would handle the alert based on `alert_message`
-    # For example, logging it or triggering another action
-    print("Received alert:", alert_message)
-    
-    # Optional: Send notification (via email, SMS, etc.)
-    # send_email("New TradingView Alert", alert_message)
-    # send_sms(alert_message)
-
-    return JSONResponse(status_code=200, content={"message": "Received successfully"})
+    try:
+        content_type = request.headers.get('Content-Type')
+        if content_type == "application/json":
+            data = await request.json()
+            print("Received JSON data:", data)  # Log the JSON data
+            return JSONResponse(status_code=200, content={"message": "JSON received successfully"})
+        else:
+            raw_data = await request.body()
+            print("Received Non-JSON data:", raw_data.decode())  # Log raw data
+            return JSONResponse(status_code=200, content={"message": "Non-JSON received successfully"})
+    except Exception as e:
+        print("Error processing request:", str(e))  # Log any errors
+        return JSONResponse(status_code=400, content={"message": "Bad request"})
 
 
 @app.post("/remove-bg")
