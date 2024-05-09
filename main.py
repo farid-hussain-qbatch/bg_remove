@@ -2,7 +2,7 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import FileResponse
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
- 
+import json
 from rembg import remove
 from PIL import Image
 import io
@@ -11,18 +11,25 @@ app = FastAPI()
 
 @app.post("/tradingview-webhook")
 async def tradingview_webhook(request: Request):
+    content_type = request.headers.get('Content-Type', '')
+
     try:
-        content_type = request.headers.get('Content-Type')
-        if content_type == "application/json":
+        if 'application/json' in content_type:
             data = await request.json()
-            print("Received JSON data:", data)  # Log the JSON data
-            return JSONResponse(status_code=200, content={"message": "JSON received successfully"})
         else:
-            raw_data = await request.body()
-            print("Received Non-JSON data:", raw_data.decode())  # Log raw data
-            return JSONResponse(status_code=200, content={"message": "Non-JSON received successfully"})
+            # Attempt to parse as JSON even if the content-type is not application/json
+            body = await request.body()
+            data = json.loads(body.decode('utf-8'))
+        
+        print("Received data:", data)
+        return JSONResponse(status_code=200, content={"message": "Data received successfully"})
+
+    except json.JSONDecodeError:
+        # If JSON decoding fails, return an error response
+        return JSONResponse(status_code=400, content={"message": "Invalid JSON data"})
+
     except Exception as e:
-        print("Error processing request:", str(e))  # Log any errors
+        print("Error processing request:", str(e))
         return JSONResponse(status_code=400, content={"message": "Bad request"})
 
 
